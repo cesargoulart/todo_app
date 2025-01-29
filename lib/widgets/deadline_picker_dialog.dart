@@ -23,13 +23,18 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
   @override
   void initState() {
     super.initState();
-    selectedDate = widget.initialDate?.toLocal() ?? DateTime.now().toLocal();
-    selectedTime = TimeOfDay.fromDateTime(widget.initialDate?.toLocal() ?? DateTime.now().toLocal());
+    // Ensure the initial date is not before now
+    final now = DateTime.now();
+    selectedDate = widget.initialDate?.isBefore(now) ?? true 
+        ? now 
+        : widget.initialDate!.toLocal();
+    selectedTime = TimeOfDay.fromDateTime(selectedDate);
     selectedRepeatOption = widget.initialRepeatOption ?? RepeatOption.never;
   }
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -53,12 +58,18 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
                 SizedBox(
                   height: 180,
                   child: CalendarDatePicker(
-                    initialDate: selectedDate,
-                    firstDate: DateTime.now(),
+                    initialDate: selectedDate.isBefore(now) ? now : selectedDate,
+                    firstDate: now,
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                     onDateChanged: (date) {
                       setState(() {
-                        selectedDate = date;
+                        selectedDate = DateTime(
+                          date.year,
+                          date.month,
+                          date.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
                       });
                     },
                   ),
@@ -97,6 +108,13 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
                     if (time != null) {
                       setState(() {
                         selectedTime = time;
+                        selectedDate = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          time.hour,
+                          time.minute,
+                        );
                       });
                     }
                   },
@@ -132,7 +150,7 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
                         onPressed: () {
-                          final DateTime deadline = DateTime(
+                          final deadline = DateTime(
                             selectedDate.year,
                             selectedDate.month,
                             selectedDate.day,

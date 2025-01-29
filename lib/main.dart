@@ -1,17 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../pages/add_task_page.dart';
-import '../widgets/task_list_widget.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io';
+import 'pages/add_task_page.dart';
+import 'widgets/task_list_widget.dart';
+import 'services/notification_service.dart';
+import 'services/task_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o Supabase
+  // Initialize notifications
+  final notificationService = NotificationService();
+
+  // Initialize Supabase
   await Supabase.initialize(
     url: 'https://vggdloymkuntqiisrivy.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnZ2Rsb3lta3VudHFpaXNyaXZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc4OTQxNTUsImV4cCI6MjA1MzQ3MDE1NX0.X1-dH3eRMcwQZ3fqkvHJ0gbweWM0UfO76Nqh8NV1gCo',
   );
+
+  // Initialize Task Service after Supabase
+  final taskService = TaskService();
+
+  const initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const initializationSettingsIOS = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  const initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+
+  // Initialize notifications
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  // Create notification channel for Android
+  if (Platform.isAndroid) {
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(const AndroidNotificationChannel(
+          'task_deadlines',
+          'Task Deadlines',
+          description: 'Notifications for task deadlines',
+          importance: Importance.max,
+        ));
+  }
 
   runApp(const MyApp());
 }
@@ -22,6 +62,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: NavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       home: const HomePage(),
@@ -46,7 +87,7 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Todo Task App'),
       ),
       body: TaskListWidget(
-        key: _taskListKey, // Define a chave global para acessar o estado do TaskListWidget
+        key: _taskListKey,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -55,9 +96,8 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(builder: (context) => const AddTaskPage()),
           );
 
-          // Recarrega a lista de tarefas se uma nova tarefa foi adicionada
           if (result == true) {
-            _taskListKey.currentState?.reloadTasks(); // Atualiza o TaskListWidget
+            _taskListKey.currentState?.reloadTasks();
           }
         },
         child: const Icon(Icons.add),

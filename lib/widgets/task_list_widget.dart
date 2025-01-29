@@ -5,6 +5,7 @@ import 'toggle_completed_button.dart';
 import 'hide_long_deadline_button.dart';
 import 'deadline_button.dart';
 import 'filter_buttons_bar.dart';
+import 'dart:async';
 
 class TaskListWidget extends StatefulWidget {
   const TaskListWidget({Key? key}) : super(key: key);
@@ -19,6 +20,8 @@ class TaskListWidgetState extends State<TaskListWidget> {
   bool _isLoading = true;
   bool _hideCompleted = false;
   bool _hideLongDeadlines = false;
+  Timer? _deadlineCheckTimer;
+  Set<String> _shownDialogs = {};  // Track which deadlines we've shown dialogs for
 
   // List of colors for task boxes
   final List<Color> _boxColors = [
@@ -33,6 +36,92 @@ class TaskListWidgetState extends State<TaskListWidget> {
   void initState() {
     super.initState();
     _fetchTasks();
+    _startDeadlineCheck();
+  }
+
+  void _startDeadlineCheck() {
+    _deadlineCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _checkDeadlines();
+    });
+  }
+
+  Future<void> _checkDeadlines() async {
+    try {
+      final now = DateTime.now();
+      debugPrint('Checking deadlines at ${now.toString()}');
+
+      for (final task in _tasks) {
+        if (task['deadline'] != null && !task['completed']) {
+          final deadline = DateTime.parse(task['deadline']);
+          final difference = now.difference(deadline).abs();
+          final dialogKey = '${task['id']}_${deadline.toString()}';
+          
+          if (difference.inMinutes == 0 && difference.inHours == 0 && !_shownDialogs.contains(dialogKey)) {
+            debugPrint('Task deadline reached: ${task['title']}');
+            _shownDialogs.add(dialogKey);  // Mark this deadline as shown
+            _showDeadlineDialog(
+              task['id'],
+              task['title'],
+              task['description'],
+              deadline,
+              task['repeat_option'] != null 
+                  ? RepeatOption.fromJson(task['repeat_option'])
+                  : RepeatOption.never
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking deadlines: $e');
+    }
+  }
+
+  void _showDeadlineDialog(int taskId, String title, String description, DateTime deadline, RepeatOption repeatOption) {
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Prazo Atingido!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('A tarefa chegou ao prazo:'),
+                SizedBox(height: 8),
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+                if (description.isNotEmpty) ...[
+                  SizedBox(height: 8),
+                  Text(description),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  // Add 5 minutes to the deadline
+                  final newDeadline = deadline.add(const Duration(minutes: 5));
+                  await _taskService.updateTaskDeadline(taskId, newDeadline, repeatOption);
+                  await _fetchTasks();
+                },
+                child: Text('Adiar 5min'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  // Mark task as completed
+                  await _taskService.updateTaskCompletion(taskId, true);
+                  await _fetchTasks();
+                },
+                child: Text('Concluir'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   Future<void> _fetchTasks() async {
@@ -44,11 +133,18 @@ class TaskListWidgetState extends State<TaskListWidget> {
       final tasks = await _taskService.fetchTasks();
       setState(() {
         _tasks = tasks;
+        // Clean up _shownDialogs by removing entries for tasks that no longer exist
+        _shownDialogs.removeWhere((dialogKey) {
+          final taskId = int.tryParse(dialogKey.split('_')[0]);
+          return taskId == null || !tasks.any((task) => task['id'] == taskId);
+        });
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar tarefas: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar tarefas: $e')),
+        );
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -61,10 +157,18 @@ class TaskListWidgetState extends State<TaskListWidget> {
       await _taskService.updateTaskCompletion(taskId, isCompleted);
       _fetchTasks(); // Atualiza a lista após alterar o estado da tarefa
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao atualizar tarefa: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao atualizar tarefa: $e')),
+        );
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _deadlineCheckTimer?.cancel();
+    super.dispose();
   }
 
   @override
