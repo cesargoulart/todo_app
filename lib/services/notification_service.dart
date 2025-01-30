@@ -30,8 +30,16 @@ class NotificationService {
 
       await _notifications.initialize(
         initializationSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) {
+        onDidReceiveNotificationResponse: (NotificationResponse response) async {
           debugPrint('Notification clicked: ${response.payload}');
+          if (response.payload != null) {
+            final taskId = int.parse(response.payload!);
+            if (response.actionId == 'complete') {
+              await TaskService().updateTaskCompletion(taskId, true);
+            } else if (response.actionId == 'snooze') {
+              // TODO: Implement snooze functionality
+            }
+          }
         },
       );
 
@@ -61,33 +69,66 @@ class NotificationService {
     try {
       debugPrint('Showing notification for task: $title');
 
-      showDialog(
-        context: NavigationService.navigatorKey.currentContext!,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Deadline Reached'),
-            content: Text('Task "$title" deadline has been reached.'),
-            actions: <Widget>[
-              TextButton(
-                child: Text('OK'),
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  TaskService().updateTaskCompletion(taskId, true);
-                },
-              ),
-              TextButton(
-                child: Text('Snooze'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // TODO: Implement snooze functionality
-                },
-              ),
-            ],
+      // For Android and iOS, show system notification
+      if (Theme.of(NavigationService.navigatorKey.currentContext!).platform == TargetPlatform.android ||
+          Theme.of(NavigationService.navigatorKey.currentContext!).platform == TargetPlatform.iOS) {
+        await _notifications.show(
+          taskId,
+          'Deadline Reached',
+          'Task "$title" deadline has been reached.',
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              'task_deadlines',
+              'Task Deadlines',
+              channelDescription: 'Notifications for task deadlines',
+              importance: Importance.max,
+              priority: Priority.high,
+              enableVibration: true,
+              actions: [
+                AndroidNotificationAction('complete', 'Complete'),
+                AndroidNotificationAction('snooze', 'Snooze'),
+              ],
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          payload: taskId.toString(),
+        );
+      } else {
+        // For desktop platforms, show dialog
+        if (NavigationService.navigatorKey.currentContext != null) {
+          showDialog(
+            context: NavigationService.navigatorKey.currentContext!,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Deadline Reached'),
+                content: Text('Task "$title" deadline has been reached.'),
+                actions: <Widget>[
+                  TextButton(
+                    child: Text('OK'),
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      TaskService().updateTaskCompletion(taskId, true);
+                    },
+                  ),
+                  TextButton(
+                    child: Text('Snooze'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // TODO: Implement snooze functionality
+                    },
+                  ),
+                ],
+              );
+            },
           );
-        },
-      );
+        }
+      }
 
-      debugPrint('Notification dialog shown successfully');
+      debugPrint('Notification shown successfully');
     } catch (e) {
       debugPrint('Error showing notification dialog: $e');
     }

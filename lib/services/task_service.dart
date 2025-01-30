@@ -13,7 +13,11 @@ class TaskService {
   }
 
   // Método para adicionar uma tarefa
-  Future<void> addTask(String title, String description, {DateTime? deadline, RepeatOption repeatOption = RepeatOption.never}) async {
+  Future<void> addTask(String title, String description, {
+    DateTime? deadline, 
+    RepeatOption repeatOption = RepeatOption.never,
+    List<int>? selectedDays,
+  }) async {
     // If deadline is in the past, set it to now
     final now = DateTime.now();
     if (deadline != null && deadline.isBefore(now)) {
@@ -26,6 +30,7 @@ class TaskService {
       'completed': false,
       'deadline': deadline?.toIso8601String(),
       'repeat_option': repeatOption.toJson(),
+      'selected_days': selectedDays,
     }).execute();
 
     if (response.status != 200 && response.status != 201) {
@@ -47,11 +52,12 @@ class TaskService {
   }
 
   // Método para atualizar o prazo e repetição da tarefa
-  Future<void> updateTaskDeadline(
-    int taskId, 
+  Future<void> updateTaskDeadline({
+    required int taskId,
     DateTime? deadline,
-    [RepeatOption repeatOption = RepeatOption.never]
-  ) async {
+    RepeatOption repeatOption = RepeatOption.never,
+    List<int>? selectedDays,
+  }) async {
     // If deadline is in the past, set it to now
     final now = DateTime.now();
     if (deadline != null && deadline.isBefore(now)) {
@@ -61,6 +67,7 @@ class TaskService {
     final response = await _client.from('todos').update({
       'deadline': deadline?.toIso8601String(),
       'repeat_option': repeatOption.toJson(),
+      'selected_days': selectedDays,
     }).eq('id', taskId).execute();
 
     if (response.status != 200 && response.status != 204) {
@@ -71,7 +78,11 @@ class TaskService {
   }
 
   // Método para obter a próxima data com base na repetição
-  DateTime? getNextDeadline(DateTime current, RepeatOption repeatOption) {
+  DateTime? getNextDeadline(
+    DateTime current,
+    RepeatOption repeatOption, [
+    List<int>? selectedDays,
+  ]) {
     final now = DateTime.now();
     DateTime? nextDeadline;
 
@@ -82,12 +93,51 @@ class TaskService {
         nextDeadline = current.add(const Duration(days: 1));
         break;
       case RepeatOption.weekly:
-        nextDeadline = current.add(const Duration(days: 7));
+        if (selectedDays != null && selectedDays.isNotEmpty) {
+          // Find the next selected day that's after current
+          final today = DateTime.now().weekday;
+          final sortedDays = List<int>.from(selectedDays)..sort();
+          
+          // Find the next day after today
+          int? nextDay = sortedDays.firstWhere(
+            (day) => day > today,
+            orElse: () => sortedDays.first, // Wrap around to first day if none found
+          );
+          
+          // Calculate days to add
+          int daysToAdd;
+          if (nextDay <= today) {
+            // If wrapping around to next week
+            daysToAdd = 7 - today + nextDay;
+          } else {
+            daysToAdd = nextDay - today;
+          }
+          
+          nextDeadline = DateTime(
+            current.year,
+            current.month,
+            current.day + daysToAdd,
+            current.hour,
+            current.minute,
+          );
+        } else {
+          // Default to 7 days if no days selected
+          nextDeadline = current.add(const Duration(days: 7));
+        }
         break;
       case RepeatOption.monthly:
         nextDeadline = DateTime(
           current.year,
           current.month + 1,
+          current.day,
+          current.hour,
+          current.minute,
+        );
+        break;
+      case RepeatOption.yearly:
+        nextDeadline = DateTime(
+          current.year + 1,
+          current.month,
           current.day,
           current.hour,
           current.minute,
@@ -105,12 +155,44 @@ class TaskService {
             nextDeadline = nextDeadline.add(const Duration(days: 1));
             break;
           case RepeatOption.weekly:
-            nextDeadline = nextDeadline.add(const Duration(days: 7));
+            if (selectedDays != null && selectedDays.isNotEmpty) {
+              // Find the next selected day after current
+              final currentWeekday = nextDeadline.weekday;
+              final sortedDays = List<int>.from(selectedDays)..sort();
+              
+              // Find the next day after today
+              int? nextDay = sortedDays.firstWhere(
+                (day) => day > currentWeekday,
+                orElse: () => sortedDays.first, // Wrap around to first day if none found
+              );
+              
+              // Calculate days to add
+              int daysToAdd;
+              if (nextDay <= currentWeekday) {
+                // If wrapping around to next week
+                daysToAdd = 7 - currentWeekday + nextDay;
+              } else {
+                daysToAdd = nextDay - currentWeekday;
+              }
+              
+              nextDeadline = nextDeadline.add(Duration(days: daysToAdd));
+            } else {
+              nextDeadline = nextDeadline.add(const Duration(days: 7));
+            }
             break;
           case RepeatOption.monthly:
             nextDeadline = DateTime(
               nextDeadline.year,
               nextDeadline.month + 1,
+              nextDeadline.day,
+              nextDeadline.hour,
+              nextDeadline.minute,
+            );
+            break;
+          case RepeatOption.yearly:
+            nextDeadline = DateTime(
+              nextDeadline.year + 1,
+              nextDeadline.month,
               nextDeadline.day,
               nextDeadline.hour,
               nextDeadline.minute,

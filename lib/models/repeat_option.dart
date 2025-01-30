@@ -2,7 +2,8 @@ enum RepeatOption {
   never,
   daily,
   weekly,
-  monthly;
+  monthly,
+  yearly;
 
   String get displayName {
     switch (this) {
@@ -14,6 +15,8 @@ enum RepeatOption {
         return 'Semanalmente';
       case RepeatOption.monthly:
         return 'Mensalmente';
+      case RepeatOption.yearly:
+        return 'Anualmente';
     }
   }
 

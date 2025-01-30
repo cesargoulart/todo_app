@@ -7,13 +7,15 @@ class DeadlineButton extends StatelessWidget {
   final DateTime? deadline;
   final Color color;
   final RepeatOption? repeatOption;
-  final Function(DateTime?, RepeatOption?) onDeadlineChanged;
+  final List<int>? selectedDays;
+  final Function(DateTime?, RepeatOption?, List<int>?) onDeadlineChanged;
 
   const DeadlineButton({
     Key? key,
     required this.deadline,
     required this.color,
     this.repeatOption,
+    this.selectedDays,
     required this.onDeadlineChanged,
   }) : super(key: key);
 
@@ -40,7 +42,7 @@ class DeadlineButton extends StatelessWidget {
         ],
       ),
       tooltip: deadline != null 
-          ? 'Prazo: ${DateFormat('dd/MM/yyyy HH:mm').format(deadline!)}\n${repeatOption != RepeatOption.never ? 'Repete: ${repeatOption?.displayName}' : ''}'
+          ? 'Prazo: ${DateFormat('dd/MM/yyyy HH:mm').format(deadline!)}\n${repeatOption != RepeatOption.never ? 'Repete: ${repeatOption?.displayName}' : ''}${repeatOption == RepeatOption.weekly && selectedDays != null ? '\nDias: ${selectedDays!.map((d) => ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][d-1]).join(', ')}' : ''}'
           : 'Adicionar prazo',
       onPressed: () async {
         final result = await showDialog<Map<String, dynamic>?>(
@@ -48,6 +50,7 @@ class DeadlineButton extends StatelessWidget {
           builder: (context) => DeadlinePickerDialog(
             initialDate: deadline,
             initialRepeatOption: repeatOption,
+            initialSelectedDays: selectedDays,
           ),
         );
         
@@ -55,6 +58,7 @@ class DeadlineButton extends StatelessWidget {
           onDeadlineChanged(
             result['deadline'] as DateTime?,
             result['repeatOption'] as RepeatOption,
+            result['selectedDays'] as List<int>?,
           );
         }
       },

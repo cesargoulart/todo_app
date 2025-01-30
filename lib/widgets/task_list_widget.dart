@@ -18,8 +18,8 @@ class TaskListWidgetState extends State<TaskListWidget> {
   final TaskService _taskService = TaskService();
   List<Map<String, dynamic>> _tasks = [];
   bool _isLoading = true;
-  bool _hideCompleted = false;
-  bool _hideLongDeadlines = false;
+  bool _hideCompleted = true;
+  bool _hideLongDeadlines = true;
   Timer? _deadlineCheckTimer;
   Set<String> _shownDialogs = {};  // Track which deadlines we've shown dialogs for
 
@@ -40,9 +40,18 @@ class TaskListWidgetState extends State<TaskListWidget> {
   }
 
   void _startDeadlineCheck() {
-    _deadlineCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _deadlineCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _checkDeadlines();
     });
+  }
+
+  // Convert dynamic list to List<int>
+  List<int>? _parseSelectedDays(dynamic value) {
+    if (value == null) return null;
+    if (value is List) {
+      return value.map((e) => e as int).toList();
+    }
+    return null;
   }
 
   Future<void> _checkDeadlines() async {
@@ -53,10 +62,13 @@ class TaskListWidgetState extends State<TaskListWidget> {
       for (final task in _tasks) {
         if (task['deadline'] != null && !task['completed']) {
           final deadline = DateTime.parse(task['deadline']);
-          final difference = now.difference(deadline).abs();
+          final timeUntilDeadline = deadline.difference(now);
           final dialogKey = '${task['id']}_${deadline.toString()}';
           
-          if (difference.inMinutes == 0 && difference.inHours == 0 && !_shownDialogs.contains(dialogKey)) {
+          // Only show notification exactly at the deadline (within 1 second precision)
+          if (timeUntilDeadline.inSeconds >= 0 && 
+              timeUntilDeadline.inSeconds < 1 && 
+              !_shownDialogs.contains(dialogKey)) {
             debugPrint('Task deadline reached: ${task['title']}');
             _shownDialogs.add(dialogKey);  // Mark this deadline as shown
             _showDeadlineDialog(
@@ -66,7 +78,8 @@ class TaskListWidgetState extends State<TaskListWidget> {
               deadline,
               task['repeat_option'] != null 
                   ? RepeatOption.fromJson(task['repeat_option'])
-                  : RepeatOption.never
+                  : RepeatOption.never,
+              _parseSelectedDays(task['selected_days']),
             );
           }
         }
@@ -76,7 +89,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
     }
   }
 
-  void _showDeadlineDialog(int taskId, String title, String description, DateTime deadline, RepeatOption repeatOption) {
+  void _showDeadlineDialog(int taskId, String title, String description, DateTime deadline, RepeatOption repeatOption, List<int>? selectedDays) {
     if (mounted) {
       showDialog(
         context: context,
@@ -101,9 +114,20 @@ class TaskListWidgetState extends State<TaskListWidget> {
               TextButton(
                 onPressed: () async {
                   Navigator.of(context).pop();
-                  // Add 5 minutes to the deadline
-                  final newDeadline = deadline.add(const Duration(minutes: 5));
-                  await _taskService.updateTaskDeadline(taskId, newDeadline, repeatOption);
+                  // Get next deadline based on repeat option and selected days
+                  DateTime newDeadline = deadline.add(const Duration(minutes: 5));
+                  if (repeatOption == RepeatOption.weekly && selectedDays != null && selectedDays.isNotEmpty) {
+                    final nextDeadline = _taskService.getNextDeadline(deadline, repeatOption, selectedDays);
+                    if (nextDeadline != null) {
+                      newDeadline = nextDeadline;
+                    }
+                  }
+                  await _taskService.updateTaskDeadline(
+                    taskId: taskId,
+                    deadline: newDeadline,
+                    repeatOption: repeatOption,
+                    selectedDays: selectedDays,
+                  );
                   await _fetchTasks();
                 },
                 child: Text('Adiar 5min'),
@@ -271,13 +295,15 @@ class TaskListWidgetState extends State<TaskListWidget> {
                         repeatOption: task['repeat_option'] != null
                             ? RepeatOption.fromJson(task['repeat_option'])
                             : RepeatOption.never,
+                        selectedDays: _parseSelectedDays(task['selected_days']),
                         color: color,
-                        onDeadlineChanged: (newDeadline, repeatOption) async {
+                        onDeadlineChanged: (newDeadline, repeatOption, selectedDays) async {
                           try {
                             await _taskService.updateTaskDeadline(
-                              task['id'],
-                              newDeadline,
-                              repeatOption ?? RepeatOption.never,
+                              taskId: task['id'],
+                              deadline: newDeadline,
+                              repeatOption: repeatOption ?? RepeatOption.never,
+                              selectedDays: selectedDays,
                             );
                             _fetchTasks();
                             if (context.mounted) {

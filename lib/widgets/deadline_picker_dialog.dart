@@ -4,11 +4,13 @@ import '../models/repeat_option.dart';
 class DeadlinePickerDialog extends StatefulWidget {
   final DateTime? initialDate;
   final RepeatOption? initialRepeatOption;
+  final List<int>? initialSelectedDays;
 
   const DeadlinePickerDialog({
     Key? key,
     this.initialDate,
     this.initialRepeatOption,
+    this.initialSelectedDays,
   }) : super(key: key);
 
   @override
@@ -19,6 +21,8 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
   late DateTime selectedDate;
   late TimeOfDay selectedTime;
   late RepeatOption selectedRepeatOption;
+  final Set<int> selectedDays = <int>{};
+  final List<String> weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
   @override
   void initState() {
@@ -30,6 +34,9 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
         : widget.initialDate!.toLocal();
     selectedTime = TimeOfDay.fromDateTime(selectedDate);
     selectedRepeatOption = widget.initialRepeatOption ?? RepeatOption.never;
+    if (widget.initialSelectedDays != null) {
+      selectedDays.addAll(widget.initialSelectedDays!);
+    }
   }
 
   @override
@@ -75,6 +82,49 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                if (selectedRepeatOption == RepeatOption.weekly)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(7, (index) {
+                        final dayNumber = index + 1;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (selectedDays.contains(dayNumber)) {
+                                selectedDays.remove(dayNumber);
+                              } else {
+                                selectedDays.add(dayNumber);
+                              }
+                            });
+                          },
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: selectedDays.contains(dayNumber)
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey.withOpacity(0.2),
+                            ),
+                            child: Center(
+                              child: Text(
+                                weekDays[index],
+                                style: TextStyle(
+                                  color: selectedDays.contains(dayNumber)
+                                    ? Colors.white
+                                    : Colors.black,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                const SizedBox(height: 12),
                 ListTile(
                   leading: const Icon(Icons.repeat),
                   title: DropdownButton<RepeatOption>(
@@ -91,6 +141,12 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
                       if (value != null) {
                         setState(() {
                           selectedRepeatOption = value;
+                          if (value != RepeatOption.weekly) {
+                            selectedDays.clear();
+                          } else if (selectedDays.isEmpty) {
+                            // If switching to weekly and no days selected, select the current day
+                            selectedDays.add(selectedDate.weekday);
+                          }
                         });
                       }
                     },
@@ -160,6 +216,7 @@ class _DeadlinePickerDialogState extends State<DeadlinePickerDialog> {
                           Navigator.of(context).pop({
                             'deadline': deadline,
                             'repeatOption': selectedRepeatOption,
+                            'selectedDays': selectedDays.toList()..sort(),
                           });
                         },
                         child: const Text('Confirmar', style: TextStyle(fontSize: 14)),
