@@ -115,12 +115,12 @@ class TaskListWidgetState extends State<TaskListWidget> {
                 onPressed: () async {
                   Navigator.of(context).pop();
                   // Get next deadline based on repeat option and selected days
-                  DateTime newDeadline = deadline.add(const Duration(minutes: 5));
-                  if (repeatOption == RepeatOption.weekly && selectedDays != null && selectedDays.isNotEmpty) {
+                  DateTime newDeadline;
+                  if (repeatOption != RepeatOption.never) {
                     final nextDeadline = _taskService.getNextDeadline(deadline, repeatOption, selectedDays);
-                    if (nextDeadline != null) {
-                      newDeadline = nextDeadline;
-                    }
+                    newDeadline = nextDeadline ?? deadline.add(const Duration(minutes: 5));
+                  } else {
+                    newDeadline = deadline.add(const Duration(minutes: 5));
                   }
                   await _taskService.updateTaskDeadline(
                     taskId: taskId,
@@ -135,11 +135,30 @@ class TaskListWidgetState extends State<TaskListWidget> {
               FilledButton(
                 onPressed: () async {
                   Navigator.of(context).pop();
-                  // Mark task as completed
-                  await _taskService.updateTaskCompletion(taskId, true);
+                  if (repeatOption != RepeatOption.never) {
+                    // For repeating tasks, update to next deadline instead of marking complete
+                    final nextDeadline = _taskService.getNextDeadline(deadline, repeatOption, selectedDays);
+                    if (nextDeadline != null) {
+                      await _taskService.updateTaskDeadline(
+                        taskId: taskId,
+                        deadline: nextDeadline,
+                        repeatOption: repeatOption,
+                        selectedDays: selectedDays,
+                      );
+                    }
+                  } else {
+                    // For non-repeating tasks, mark as completed
+                    await _taskService.updateTaskCompletion(taskId, true);
+                  }
                   await _fetchTasks();
                 },
                 child: Text('Concluir'),
+              ),
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
               ),
             ],
           );
@@ -178,7 +197,28 @@ class TaskListWidgetState extends State<TaskListWidget> {
 
   Future<void> _toggleTaskCompletion(int taskId, bool isCompleted) async {
     try {
-      await _taskService.updateTaskCompletion(taskId, isCompleted);
+      final task = _tasks.firstWhere((t) => t['id'] == taskId);
+      final repeatOption = task['repeat_option'] != null 
+          ? RepeatOption.fromJson(task['repeat_option']) 
+          : RepeatOption.never;
+      
+      if (isCompleted && repeatOption != RepeatOption.never) {
+        // For repeating tasks, update to next deadline instead of marking complete
+        final deadline = DateTime.parse(task['deadline']);
+        final selectedDays = _parseSelectedDays(task['selected_days']);
+        final nextDeadline = _taskService.getNextDeadline(deadline, repeatOption, selectedDays);
+        
+        if (nextDeadline != null) {
+          await _taskService.updateTaskDeadline(
+            taskId: taskId,
+            deadline: nextDeadline,
+            repeatOption: repeatOption,
+            selectedDays: selectedDays,
+          );
+        }
+      } else {
+        await _taskService.updateTaskCompletion(taskId, isCompleted);
+      }
       _fetchTasks(); // Atualiza a lista após alterar o estado da tarefa
     } catch (e) {
       if (mounted) {

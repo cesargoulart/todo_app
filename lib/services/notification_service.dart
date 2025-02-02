@@ -1,21 +1,70 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'task_service.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize the notification service before running the app.
+  await NotificationService().initializeNotifications();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  MyApp({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Notification Test App',
+      navigatorKey: NavigationService.navigatorKey,
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notification Test App')),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+            // This will trigger the popup dialog.
+            NotificationService().showDeadlineNotification(
+              "Test Task",
+              "This is a test notification.",
+              1,
+            );
+          },
+          child: const Text("Show Notification Popup"),
+        ),
+      ),
+    );
+  }
+}
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   static final NotificationService _instance = NotificationService._internal();
 
   factory NotificationService() {
     return _instance;
   }
 
-  NotificationService._internal() {
-    _initializeNotifications();
-  }
+  NotificationService._internal();
 
-  Future<void> _initializeNotifications() async {
+  Future<void> initializeNotifications() async {
     try {
+      // Initialize timezone data.
+      tz.initializeTimeZones();
+
       const initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const initializationSettingsIOS = DarwinInitializationSettings(
@@ -30,22 +79,13 @@ class NotificationService {
 
       await _notifications.initialize(
         initializationSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint('Notification clicked: ${response.payload}');
-          if (response.payload != null) {
-            final taskId = int.parse(response.payload!);
-            if (response.actionId == 'complete') {
-              await TaskService().updateTaskCompletion(taskId, true);
-            } else if (response.actionId == 'snooze') {
-              // TODO: Implement snooze functionality
-            }
-          }
         },
       );
 
-      // Create notification channel for Android
-      if (Theme.of(NavigationService.navigatorKey.currentContext!).platform ==
-          TargetPlatform.android) {
+      // Create notification channel for Android.
+      if (Platform.isAndroid) {
         await _notifications
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>()
@@ -54,8 +94,6 @@ class NotificationService {
               'Task Deadlines',
               description: 'Notifications for task deadlines',
               importance: Importance.max,
-              playSound: true,
-              enableVibration: true,
             ));
       }
 
@@ -65,77 +103,121 @@ class NotificationService {
     }
   }
 
-  Future<void> showDeadlineNotification(String title, String description, int taskId) async {
+  Future<void> showDeadlineNotification(
+      String title, String description, int taskId) async {
     try {
-      debugPrint('Showing notification for task: $title');
+debugPrint('Showing notification for task: $title');
+debugPrint('Current context: ${NavigationService.navigatorKey.currentContext}');
 
-      // For Android and iOS, show system notification
-      if (Theme.of(NavigationService.navigatorKey.currentContext!).platform == TargetPlatform.android ||
-          Theme.of(NavigationService.navigatorKey.currentContext!).platform == TargetPlatform.iOS) {
-        await _notifications.show(
-          taskId,
-          'Deadline Reached',
-          'Task "$title" deadline has been reached.',
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              'task_deadlines',
-              'Task Deadlines',
-              channelDescription: 'Notifications for task deadlines',
-              importance: Importance.max,
-              priority: Priority.high,
-              enableVibration: true,
-              actions: [
-                AndroidNotificationAction('complete', 'Complete'),
-                AndroidNotificationAction('snooze', 'Snooze'),
-              ],
-            ),
-            iOS: const DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
-            ),
-          ),
-          payload: taskId.toString(),
-        );
-      } else {
-        // For desktop platforms, show dialog
-        if (NavigationService.navigatorKey.currentContext != null) {
-          showDialog(
-            context: NavigationService.navigatorKey.currentContext!,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Deadline Reached'),
-                content: Text('Task "$title" deadline has been reached.'),
-                actions: <Widget>[
-                  TextButton(
-                    child: Text('OK'),
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-                      TaskService().updateTaskCompletion(taskId, true);
-                    },
-                  ),
-                  TextButton(
-                    child: Text('Snooze'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      // TODO: Implement snooze functionality
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        }
+      // Ensure that a valid context is available.
+      if (NavigationService.navigatorKey.currentContext == null) {
+        debugPrint('No valid context found for showing notification dialog');
+        return;
       }
 
-      debugPrint('Notification shown successfully');
+      showDialog(
+        context: NavigationService.navigatorKey.currentContext!,
+        barrierDismissible: false, // Prevent dismiss by tapping outside.
+        builder: (BuildContext context) {
+          return WillPopScope(
+            onWillPop: () async => false, // Prevent dismiss via back button.
+            child: AlertDialog(
+              title: const Text('Deadline Reached'),
+              content: Text('Task "$title" deadline has been reached.'),
+              actions: <Widget>[
+                // Snooze action.
+                TextButton(
+                  child: const Text('Snooze'),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    // Schedule a new notification 5 minutes from now.
+                    final now = DateTime.now();
+                    final snoozeTime = now.add(const Duration(minutes: 5));
+
+                    await _notifications.zonedSchedule(
+                      taskId,
+                      'Snoozed Task',
+                      title,
+                      tz.TZDateTime.from(snoozeTime, tz.local),
+                      const NotificationDetails(
+                        android: AndroidNotificationDetails(
+                          'task_deadlines',
+                          'Task Deadlines',
+                          importance: Importance.max,
+                          priority: Priority.high,
+                        ),
+                      ),
+                      androidAllowWhileIdle: true,
+                      uiLocalNotificationDateInterpretation:
+                          UILocalNotificationDateInterpretation.absoluteTime,
+                    );
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Task snoozed for 5 minutes'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                // Check action.
+                TextButton(
+                  child: const Text('OK'),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await TaskService().updateTaskCompletion(taskId, true);
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Task marked as completed'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                // OK action with explicit style.
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue, // Ensures contrast.
+                  ),
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('Dismiss'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      debugPrint('Notification dialog shown successfully');
     } catch (e) {
       debugPrint('Error showing notification dialog: $e');
     }
   }
 }
 
-// Navigator key for access to BuildContext
+// Navigator key for access to BuildContext from anywhere.
 class NavigationService {
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+}
+
+// Dummy TaskService implementation for demonstration.
+class TaskService {
+  Future<void> updateTaskCompletion(int taskId, bool completed) async {
+    debugPrint('Task $taskId updated to completed: $completed');
+    // Simulate a network or database update delay.
+    await Future.delayed(const Duration(seconds: 1));
+  }
 }

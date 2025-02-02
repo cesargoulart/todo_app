@@ -5,13 +5,10 @@ import 'dart:io';
 import 'pages/add_task_page.dart';
 import 'widgets/task_list_widget.dart';
 import 'services/notification_service.dart';
-import 'services/task_service.dart';
+import 'services/task_service.dart' as task_service;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize notifications
-  final notificationService = NotificationService();
 
   // Initialize Supabase
   await Supabase.initialize(
@@ -23,35 +20,9 @@ void main() async {
   // Initialize Task Service after Supabase
   final taskService = TaskService();
 
-  const initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const initializationSettingsIOS = DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
-  );
-  const initializationSettings = InitializationSettings(
-    android: initializationSettingsAndroid,
-    iOS: initializationSettingsIOS,
-  );
-
   // Initialize notifications
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-  // Create notification channel for Android
-  if (Platform.isAndroid) {
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-          'task_deadlines',
-          'Task Deadlines',
-          description: 'Notifications for task deadlines',
-          importance: Importance.max,
-        ));
-  }
+  final notificationService = NotificationService();
+  await notificationService.initializeNotifications();
 
   runApp(const MyApp());
 }
