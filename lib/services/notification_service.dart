@@ -164,7 +164,7 @@ debugPrint('Current context: ${NavigationService.navigatorKey.currentContext}');
                 ),
                 // Check action.
                 TextButton(
-                  child: const Text('OK'),
+                  child: const Text('OK', style: TextStyle(color: Color.fromARGB(255, 152, 236, 155))),
                   onPressed: () async {
                     Navigator.of(context).pop();
                     await TaskService().updateTaskCompletion(taskId, true);

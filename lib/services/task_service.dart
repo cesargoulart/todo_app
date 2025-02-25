@@ -18,9 +18,17 @@ class TaskService {
     RepeatOption repeatOption = RepeatOption.never,
     List<int>? selectedDays,
   }) async {
-    // If deadline is in the past, set it to now
     final now = DateTime.now();
-    if (deadline != null && deadline.isBefore(now)) {
+    
+    // For repeating tasks, ensure we set a proper future date
+    if (deadline != null && repeatOption != RepeatOption.never) {
+      // If deadline is in the past or now, get next occurrence
+      if (!deadline.isAfter(now)) {
+        final nextDeadline = getNextDeadline(deadline, repeatOption, selectedDays);
+        deadline = nextDeadline ?? now;
+      }
+    } else if (deadline != null && deadline.isBefore(now)) {
+      // For non-repeating tasks, if deadline is in past, set to now
       deadline = now;
     }
 
@@ -31,10 +39,10 @@ class TaskService {
       'deadline': deadline?.toIso8601String(),
       'repeat_option': repeatOption.toJson(),
       'selected_days': selectedDays,
-    }).execute();
+    }).maybeSingle();
 
-    if (response.status != 200 && response.status != 201) {
-      throw Exception('Erro ao adicionar tarefa: Código de status ${response.status}');
+    if (response == null || response['error'] != null) {
+      throw Exception('Erro ao adicionar tarefa: Código de status ${response?['status']}');
     }
 
     debugPrint('Task added successfully: $title');
@@ -42,13 +50,17 @@ class TaskService {
 
   // Método para buscar todas as tarefas
   Future<List<Map<String, dynamic>>> fetchTasks() async {
-    final response = await _client.from('todos').select().execute();
+    final response = await _client.from('todos').select();
 
-    if (response.status != 200) {
-      throw Exception('Erro ao buscar tarefas: Código de status ${response.status}');
+    if (response == null) {
+      throw Exception('Erro ao buscar tarefas: Resposta nula');
     }
-
-    return List<Map<String, dynamic>>.from(response.data ?? []);
+    
+    if (response is List) {
+      return List<Map<String, dynamic>>.from(response);
+    } else {
+      throw Exception('Erro ao buscar tarefas: Resposta inesperada ${response.runtimeType}');
+    }
   }
 
   // Método para atualizar o prazo e repetição da tarefa
@@ -58,9 +70,17 @@ class TaskService {
     RepeatOption repeatOption = RepeatOption.never,
     List<int>? selectedDays,
   }) async {
-    // If deadline is in the past, set it to now
     final now = DateTime.now();
-    if (deadline != null && deadline.isBefore(now)) {
+    
+    // For repeating tasks, ensure we set a proper future date
+    if (deadline != null && repeatOption != RepeatOption.never) {
+      // If deadline is in the past or now, get next occurrence
+      if (!deadline.isAfter(now)) {
+        final nextDeadline = getNextDeadline(deadline, repeatOption, selectedDays);
+        deadline = nextDeadline ?? now;
+      }
+    } else if (deadline != null && deadline.isBefore(now)) {
+      // For non-repeating tasks, if deadline is in past, set to now
       deadline = now;
     }
 
@@ -68,10 +88,10 @@ class TaskService {
       'deadline': deadline?.toIso8601String(),
       'repeat_option': repeatOption.toJson(),
       'selected_days': selectedDays,
-    }).eq('id', taskId).execute();
+    }).eq('id', taskId).maybeSingle();
 
-    if (response.status != 200 && response.status != 204) {
-      throw Exception('Erro ao atualizar prazo: Código de status ${response.status}');
+    if (response == null || response['error'] != null) {
+      throw Exception('Erro ao atualizar prazo: Código de status ${response?['status']}');
     }
 
     debugPrint('Task deadline updated for ID: $taskId');
@@ -95,31 +115,26 @@ class TaskService {
       case RepeatOption.weekly:
         if (selectedDays != null && selectedDays.isNotEmpty) {
           // Find the next selected day that's after current
-          final today = DateTime.now().weekday;
+          final currentWeekday = current.weekday;
           final sortedDays = List<int>.from(selectedDays)..sort();
           
-          // Find the next day after today
+          // Find the next day after current weekday
           int? nextDay = sortedDays.firstWhere(
-            (day) => day > today,
+            (day) => day > currentWeekday,
             orElse: () => sortedDays.first, // Wrap around to first day if none found
           );
           
           // Calculate days to add
           int daysToAdd;
-          if (nextDay <= today) {
+          if (nextDay <= currentWeekday) {
             // If wrapping around to next week
-            daysToAdd = 7 - today + nextDay;
+            daysToAdd = 7 - currentWeekday + nextDay;
           } else {
-            daysToAdd = nextDay - today;
+            daysToAdd = nextDay - currentWeekday;
           }
           
-          nextDeadline = DateTime(
-            current.year,
-            current.month,
-            current.day + daysToAdd,
-            current.hour,
-            current.minute,
-          );
+          // Add days while keeping time components
+          nextDeadline = current.add(Duration(days: daysToAdd));
         } else {
           // Default to 7 days if no days selected
           nextDeadline = current.add(const Duration(days: 7));
@@ -209,10 +224,10 @@ class TaskService {
   Future<void> updateTaskCompletion(int taskId, bool isCompleted) async {
     final response = await _client.from('todos').update({
       'completed': isCompleted,
-    }).eq('id', taskId).execute();
+    }).eq('id', taskId).maybeSingle();
 
-    if (response.status != 200 && response.status != 204) {
-      throw Exception('Erro ao atualizar tarefa: Código de status ${response.status}');
+    if (response == null || response['error'] != null) {
+      throw Exception('Erro ao atualizar tarefa: Código de status ${response?['status']}');
     }
 
     debugPrint('Task completion updated for ID: $taskId');
@@ -220,10 +235,10 @@ class TaskService {
 
   // Método para excluir uma tarefa
   Future<void> deleteTask(int taskId) async {
-    final response = await _client.from('todos').delete().eq('id', taskId).execute();
+    final response = await _client.from('todos').delete().eq('id', taskId).maybeSingle();
 
-    if (response.status != 200 && response.status != 204) {
-      throw Exception('Erro ao excluir tarefa: Código de status ${response.status}');
+    if (response == null || response['error'] != null) {
+      throw Exception('Erro ao excluir tarefa: Código de status ${response?['status']}');
     }
 
     debugPrint('Task deleted: $taskId');

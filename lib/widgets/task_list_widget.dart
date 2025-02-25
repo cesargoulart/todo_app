@@ -155,7 +155,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
                 child: Text('Concluir'),
               ),
               TextButton(
-                child: const Text('OK'),
+child: const Text('OK', style: TextStyle(color: Color.fromARGB(255, 160, 143, 143), fontWeight: FontWeight.bold)),
                 onPressed: () {
                   Navigator.of(context).pop();
                 },

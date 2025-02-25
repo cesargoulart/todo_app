@@ -1,0 +1,2 @@
+D:/Projectos/flutter/todo/todo10/todo_app/android/app/.cxx/Debug/60v484c3/x86_64/CMakeFiles/edit_cache.dir
+D:/Projectos/flutter/todo/todo10/todo_app/android/app/.cxx/Debug/60v484c3/x86_64/CMakeFiles/rebuild_cache.dir
