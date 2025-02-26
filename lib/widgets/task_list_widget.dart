@@ -7,6 +7,7 @@ import 'hide_long_deadline_button.dart';
 import 'deadline_button.dart';
 import 'filter_buttons_bar.dart';
 import 'dart:async';
+import 'dart:convert';
 
 class TaskListWidget extends StatefulWidget {
   const TaskListWidget({Key? key}) : super(key: key);
@@ -22,7 +23,8 @@ class TaskListWidgetState extends State<TaskListWidget> {
   bool _hideCompleted = true;
   bool _hideLongDeadlines = true;
   Timer? _deadlineCheckTimer;
-  Set<String> _shownDialogs = {}; // Track which deadlines we've shown dialogs for
+  Set<String> _shownDialogs =
+      {}; // Track which deadlines we've shown dialogs for
 
   // List of colors for task boxes
   final List<Color> _boxColors = [
@@ -50,7 +52,13 @@ class TaskListWidgetState extends State<TaskListWidget> {
   RepeatSettings _getRepeatSettings(Map<String, dynamic> task) {
     // Check if using new format
     if (task['repeat_settings'] != null) {
-      return RepeatSettings.fromJson(task['repeat_settings']);
+      if (task['repeat_settings'] is String) {
+        // Parse from JSON string
+        return RepeatSettings.fromJson(jsonDecode(task['repeat_settings']));
+      } else {
+        // Already a map
+        return RepeatSettings.fromJson(task['repeat_settings']);
+      }
     }
 
     // Handle legacy format
