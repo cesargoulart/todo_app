@@ -97,14 +97,21 @@ Future<void> updateTaskWithNextDeadline({
       deadline = now;
     }
 
-    final response = await _client.from('todos').update({
+    // First check if task exists
+    final exists = await _client.from('todos')
+        .select()
+        .eq('id', taskId)
+        .maybeSingle();
+        
+    if (exists == null) {
+      throw Exception('Tarefa não encontrada. A tarefa pode ter sido excluída em outro dispositivo.');
+    }
+
+    // Then update if it exists
+    await _client.from('todos').update({
       'deadline': deadline?.toIso8601String(),
       'repeat_settings': settings.toJson(),
-    }).eq('id', taskId).maybeSingle();
-
-    if (response == null || response['error'] != null) {
-      throw Exception('Erro ao atualizar prazo: Código de status ${response?['status']}');
-    }
+    }).eq('id', taskId);
 
     debugPrint('Task deadline updated for ID: $taskId');
   }
@@ -330,13 +337,24 @@ Future<void> updateTaskWithNextDeadline({
 
   // Method to update task completion status
   Future<void> updateTaskCompletion(int taskId, bool isCompleted) async {
-    final response = await _client.from('todos').update({
-      'completed': isCompleted,
-    }).eq('id', taskId).maybeSingle();
-
-    if (response == null || response['error'] != null) {
-      throw Exception('Erro ao atualizar tarefa: Código de status ${response?['status']}');
+    debugPrint('Updating task completion for ID: $taskId');
+    
+    // First check if task exists
+    final exists = await _client
+        .from('todos')
+        .select()
+        .eq('id', taskId)
+        .maybeSingle();
+        
+    if (exists == null) {
+      throw Exception('A tarefa não existe mais no banco de dados (ID: $taskId). Ela pode ter sido excluída por outro usuário ou dispositivo.');
     }
+
+    // Then update if it exists
+    final response = await _client
+        .from('todos')
+        .update({'completed': isCompleted})
+        .eq('id', taskId);
 
     debugPrint('Task completion updated for ID: $taskId');
   }

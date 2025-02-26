@@ -213,7 +213,11 @@ class TaskListWidgetState extends State<TaskListWidget> {
 
   Future<void> _toggleTaskCompletion(int taskId, bool isCompleted) async {
     try {
-      final task = _tasks.firstWhere((t) => t['id'] == taskId);
+      // Get the task from local state
+      final task = _tasks.firstWhere(
+        (t) => t['id'] == taskId,
+        orElse: () => throw Exception('Não foi possível encontrar a tarefa na lista local. Tentando atualizar a lista...'),
+      );
       final repeatSettings = _getRepeatSettings(task);
 
       if (isCompleted && repeatSettings.option != RepeatOption.never) {
@@ -290,6 +294,8 @@ class TaskListWidgetState extends State<TaskListWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao atualizar tarefa: $e')),
         );
+        // Refresh the task list to ensure UI is in sync with database
+        _fetchTasks();
       }
     }
   }
@@ -443,9 +449,15 @@ class TaskListWidgetState extends State<TaskListWidget> {
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Erro ao atualizar prazo: $e'),
+                              SnackBar(
+                                content: Text(e.toString().replaceAll('Exception: ', '')),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.red[700],
+                                duration: const Duration(seconds: 4),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
+                              ),
                               );
                             }
                           }
