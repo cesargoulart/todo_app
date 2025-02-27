@@ -3,51 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // Initialize the notification service before running the app.
-  await NotificationService().initializeNotifications();
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  MyApp({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Notification Test App',
-      navigatorKey: NavigationService.navigatorKey,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Notification Test App')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            // This will trigger the popup dialog.
-            NotificationService().showDeadlineNotification(
-              "Test Task",
-              "This is a test notification.",
-              1,
-            );
-          },
-          child: const Text("Show Notification Popup"),
-        ),
-      ),
-    );
-  }
-}
+import '../services/task_service.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
@@ -211,13 +167,4 @@ debugPrint('Current context: ${NavigationService.navigatorKey.currentContext}');
 // Navigator key for access to BuildContext from anywhere.
 class NavigationService {
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-}
-
-// Dummy TaskService implementation for demonstration.
-class TaskService {
-  Future<void> updateTaskCompletion(int taskId, bool completed) async {
-    debugPrint('Task $taskId updated to completed: $completed');
-    // Simulate a network or database update delay.
-    await Future.delayed(const Duration(seconds: 1));
-  }
 }

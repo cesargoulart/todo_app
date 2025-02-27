@@ -18,7 +18,7 @@ void main() async {
   );
 
   // Initialize Task Service after Supabase
-  final taskService = TaskService();
+  final taskService = task_service.TaskService();
 
   // Initialize notifications
   final notificationService = NotificationService();

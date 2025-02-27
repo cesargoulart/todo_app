@@ -8,6 +8,7 @@ import 'deadline_button.dart';
 import 'filter_buttons_bar.dart';
 import 'dart:async';
 import 'dart:convert';
+import '../services/notification_service.dart';
 
 class TaskListWidget extends StatefulWidget {
   const TaskListWidget({Key? key}) : super(key: key);
@@ -99,87 +100,18 @@ class TaskListWidgetState extends State<TaskListWidget> {
               !_shownDialogs.contains(dialogKey)) {
             debugPrint('Task deadline reached: ${task['title']}');
             _shownDialogs.add(dialogKey); // Mark this deadline as shown
-            _showDeadlineDialog(
-              task['id'],
+
+            // Use the NotificationService to show a notification.
+            NotificationService().showDeadlineNotification(
               task['title'],
               task['description'],
-              deadline,
-              task, // Pass the entire task
+              task['id'],
             );
           }
         }
       }
     } catch (e) {
       debugPrint('Error checking deadlines: $e');
-    }
-  }
-
-  void _showDeadlineDialog(int taskId, String title, String description,
-      DateTime deadline, Map<String, dynamic> task) {
-    final repeatSettings = _getRepeatSettings(task);
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Prazo Atingido!'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('A tarefa chegou ao prazo:'),
-                SizedBox(height: 8),
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-                if (description.isNotEmpty) ...[
-                  SizedBox(height: 8),
-                  Text(description),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  // Snooze 5 minutes
-                  final newDeadline = deadline.add(const Duration(minutes: 5));
-                  await _taskService.updateTaskDeadline(
-                    taskId: taskId,
-                    deadline: newDeadline,
-                    repeatSettings: repeatSettings,
-                  );
-                  await _fetchTasks();
-                },
-                child: Text('Adiar 5min'),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  // For repeating tasks, update to next
-                  if (repeatSettings.option != RepeatOption.never) {
-                    await _toggleTaskCompletion(taskId, true);
-                  } else {
-                    // For non-repeating tasks, mark as completed
-                    await _taskService.updateTaskCompletion(taskId, true);
-                    await _fetchTasks();
-                  }
-                },
-                child: Text('Concluir'),
-              ),
-              TextButton(
-                child: const Text('OK',
-                    style: TextStyle(
-                        color: Color.fromARGB(255, 160, 143, 143),
-                        fontWeight: FontWeight.bold)),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
     }
   }
 
