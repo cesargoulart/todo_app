@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import '../services/task_service.dart';
+import '../widgets/task_list_widget.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
@@ -120,10 +121,13 @@ debugPrint('Current context: ${NavigationService.navigatorKey.currentContext}');
                 ),
                 // Check action.
                 TextButton(
-                  child: const Text('OK', style: TextStyle(color: Color.fromARGB(255, 152, 236, 155))),
+                  child: const Text('Complete', style: TextStyle(color: Color.fromARGB(255, 152, 236, 155))),
                   onPressed: () async {
                     Navigator.of(context).pop();
-                    await TaskService().updateTaskCompletion(taskId, true);
+                    await TaskService().completeRepeatingTask(taskId);
+                    
+                    // Trigger UI refresh using TaskListWidget instance
+                    TaskListWidgetState.instance?.reloadTasks();
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -136,15 +140,7 @@ debugPrint('Current context: ${NavigationService.navigatorKey.currentContext}');
                   },
                 ),
                 // OK action with explicit style.
-                TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue, // Ensures contrast.
-                  ),
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
+         
                 TextButton(
                   child: const Text('Dismiss'),
                   onPressed: () {

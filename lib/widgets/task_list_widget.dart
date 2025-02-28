@@ -18,8 +18,10 @@ class TaskListWidget extends StatefulWidget {
 }
 
 class TaskListWidgetState extends State<TaskListWidget> {
+  static TaskListWidgetState? instance;
   final TaskService _taskService = TaskService();
   List<Map<String, dynamic>> _tasks = [];
+
   bool _isLoading = true;
   bool _hideCompleted = true;
   bool _hideLongDeadlines = true;
@@ -39,6 +41,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
   @override
   void initState() {
     super.initState();
+    instance = this;
     _fetchTasks();
     _startDeadlineCheck();
   }
@@ -53,13 +56,10 @@ class TaskListWidgetState extends State<TaskListWidget> {
   RepeatSettings _getRepeatSettings(Map<String, dynamic> task) {
     // Check if using new format
     if (task['repeat_settings'] != null) {
-      if (task['repeat_settings'] is String) {
-        // Parse from JSON string
-        return RepeatSettings.fromJson(jsonDecode(task['repeat_settings']));
-      } else {
-        // Already a map
-        return RepeatSettings.fromJson(task['repeat_settings']);
-      }
+      final repeatSettingsData = task['repeat_settings'] is String 
+          ? jsonDecode(task['repeat_settings']) 
+          : task['repeat_settings'];
+      return RepeatSettings.fromJson(repeatSettingsData);
     }
 
     // Handle legacy format
@@ -145,6 +145,17 @@ class TaskListWidgetState extends State<TaskListWidget> {
 
   Future<void> _toggleTaskCompletion(int taskId, bool isCompleted) async {
     try {
+      // Update UI optimistically
+      setState(() {
+        final taskIndex = _tasks.indexWhere((t) => t['id'] == taskId);
+        if (taskIndex != -1) {
+          _tasks[taskIndex] = {
+            ..._tasks[taskIndex],
+            'completed': isCompleted,
+          };
+        }
+      });
+
       // Get the task from local state
       final task = _tasks.firstWhere(
         (t) => t['id'] == taskId,
@@ -234,6 +245,9 @@ class TaskListWidgetState extends State<TaskListWidget> {
 
   @override
   void dispose() {
+    if (instance == this) {
+      instance = null;
+    }
     _deadlineCheckTimer?.cancel();
     super.dispose();
   }

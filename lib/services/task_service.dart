@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/repeat_option.dart';
 import '../models/repeat_settings.dart';
@@ -284,12 +285,20 @@ Future<void> updateTaskWithNextDeadline({
     // Handle legacy data structure
     RepeatSettings settings;
     if (task['repeat_settings'] != null) {
-      settings = RepeatSettings.fromJson(task['repeat_settings']);
+      try {
+        final repeatSettingsData = task['repeat_settings'] is String 
+            ? jsonDecode(task['repeat_settings']) 
+            : task['repeat_settings'];
+        settings = RepeatSettings.fromJson(repeatSettingsData);
+      } catch (e) {
+        debugPrint('Error parsing repeat settings: $e');
+        settings = RepeatSettings.never();
+      }
     } else if (task['repeat_option'] != null) {
       // Legacy format
       settings = RepeatSettings(
         option: RepeatOption.fromJson(task['repeat_option']),
-        selectedDays: task['selected_days'] != null 
+        selectedDays: task['selected_days'] != null
             ? List<int>.from(task['selected_days'])
             : null,
       );
