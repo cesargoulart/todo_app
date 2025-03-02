@@ -164,9 +164,9 @@ class DeadlineButton extends StatelessWidget {
                     ? _formatDeadline(deadline!)
                     : 'Prazo',
                 style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
