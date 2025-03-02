@@ -18,31 +18,21 @@ class FilterButtonsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          HideLongDeadlineButton(
-            hideLongDeadlines: hideLongDeadlines,
-            onToggle: onToggleLongDeadlines,
-          ),
-          ToggleCompletedButton(
-            hideCompleted: hideCompleted,
-            onToggle: onToggleCompleted,
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        HideLongDeadlineButton(
+          hideLongDeadlines: hideLongDeadlines,
+          onToggle: onToggleLongDeadlines,
+          color: Colors.green[700]!,
+        ),
+        const SizedBox(width: 16),
+        ToggleCompletedButton(
+          hideCompleted: hideCompleted,
+          onToggle: onToggleCompleted,
+          color: Colors.blue[700]!,
+        ),
+      ],
     );
   }
 }

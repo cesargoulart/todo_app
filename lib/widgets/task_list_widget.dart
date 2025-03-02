@@ -475,34 +475,29 @@ class TaskListWidgetState extends State<TaskListWidget> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: FilterButtonsBar(
-                      hideCompleted: _hideCompleted,
-                      hideLongDeadlines: _hideLongDeadlines,
-                      onToggleCompleted: () {
-                        setState(() {
-                          _hideCompleted = !_hideCompleted;
-                        });
-                      },
-                      onToggleLongDeadlines: () {
-                        setState(() {
-                          _hideLongDeadlines = !_hideLongDeadlines;
-                        });
-                      },
-                    ),
+                  FilterButtonsBar(
+                    hideCompleted: _hideCompleted,
+                    hideLongDeadlines: _hideLongDeadlines,
+                    onToggleCompleted: () {
+                      setState(() {
+                        _hideCompleted = !_hideCompleted;
+                      });
+                    },
+                    onToggleLongDeadlines: () {
+                      setState(() {
+                        _hideLongDeadlines = !_hideLongDeadlines;
+                      });
+                    },
                   ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: HideOverdueButton(
-                        hideOverdue: _hideOverdue,
-                        onToggleOverdue: () {
-                          setState(() {
-                            _hideOverdue = !_hideOverdue;
-                          });
-                        },
-                      ),
-                    ),
+                  const SizedBox(width: 16),
+                  HideOverdueButton(
+                    hideOverdue: _hideOverdue,
+                    onToggleOverdue: () {
+                      setState(() {
+                        _hideOverdue = !_hideOverdue;
+                      });
+                    },
+                    color: Colors.red[700]!,
                   ),
                 ],
               ),
