@@ -6,6 +6,7 @@ import 'toggle_completed_button.dart';
 import 'hide_long_deadline_button.dart';
 import 'deadline_button.dart';
 import 'filter_buttons_bar.dart';
+import 'hide_overdue_button.dart'; // Import the new button
 import 'dart:async';
 import 'dart:convert';
 import '../services/notification_service.dart';
@@ -25,6 +26,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
   bool _isLoading = true;
   bool _hideCompleted = true;
   bool _hideLongDeadlines = true;
+  bool _hideOverdue = false; // New state variable
   Timer? _deadlineCheckTimer;
   Set<String> _shownDialogs =
       {}; // Track which deadlines we've shown dialogs for
@@ -272,12 +274,17 @@ class TaskListWidgetState extends State<TaskListWidget> {
       final isCompleted = task['completed'] ?? false;
       final isLongDeadline =
           deadline != null && deadline.difference(DateTime.now()).inDays > 3;
+        final isOverdue = deadline != null && deadline.isBefore(DateTime.now());
 
       if (_hideCompleted && isCompleted) {
         return false;
       }
 
       if (_hideLongDeadlines && isLongDeadline) {
+        return false;
+      }
+
+      if (_hideOverdue && isOverdue) {
         return false;
       }
 
@@ -460,27 +467,50 @@ class TaskListWidgetState extends State<TaskListWidget> {
           },
         ),
         Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: FilterButtonsBar(
-            hideCompleted: _hideCompleted,
-            hideLongDeadlines: _hideLongDeadlines,
-            onToggleCompleted: () {
-              setState(() {
-                _hideCompleted = !_hideCompleted;
-              });
-            },
-            onToggleLongDeadlines: () {
-              setState(() {
-                _hideLongDeadlines = !_hideLongDeadlines;
-              });
-            },
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: FilterButtonsBar(
+                      hideCompleted: _hideCompleted,
+                      hideLongDeadlines: _hideLongDeadlines,
+                      onToggleCompleted: () {
+                        setState(() {
+                          _hideCompleted = !_hideCompleted;
+                        });
+                      },
+                      onToggleLongDeadlines: () {
+                        setState(() {
+                          _hideLongDeadlines = !_hideLongDeadlines;
+                        });
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: HideOverdueButton(
+                        hideOverdue: _hideOverdue,
+                        onToggleOverdue: () {
+                          setState(() {
+                            _hideOverdue = !_hideOverdue;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
-    );
-  }
+        ],
+      );
+    }
 
   void reloadTasks() {
     _fetchTasks();
