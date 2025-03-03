@@ -332,15 +332,18 @@ class TaskListWidgetState extends State<TaskListWidget> {
                       }
                     },
                   ),
-                  title: Text(
-                    task['title'],
-                    style: TextStyle(
-                      decoration: task['completed']
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      color: color.withOpacity(0.9),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                  title: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      task['title'],
+                      style: TextStyle(
+                        decoration: task['completed']
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                        color: color.withOpacity(0.9),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                   subtitle: Column(
