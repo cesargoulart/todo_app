@@ -124,6 +124,15 @@ class TaskListWidgetState extends State<TaskListWidget> {
 
     try {
       final tasks = await _taskService.fetchTasks();
+      tasks.sort((a, b) {
+        DateTime? aDeadline = a['deadline'] != null ? DateTime.parse(a['deadline']) : null;
+        DateTime? bDeadline = b['deadline'] != null ? DateTime.parse(b['deadline']) : null;
+        
+        if (aDeadline == null && bDeadline == null) return 0;
+        if (aDeadline == null) return 1;
+        if (bDeadline == null) return -1;
+        return aDeadline.compareTo(bDeadline);
+      });
       setState(() {
         _tasks = tasks;
         // Clean up _shownDialogs by removing entries for tasks that no longer exist
