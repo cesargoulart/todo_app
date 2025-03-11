@@ -21,6 +21,7 @@ class NotificationService {
     try {
       // Initialize timezone data.
       tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Europe/Lisbon'));
 
       const initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
