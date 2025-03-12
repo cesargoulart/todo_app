@@ -6,11 +6,11 @@ class HideLongDeadlineButton extends StatefulWidget {
   final Color color;
 
   const HideLongDeadlineButton({
-    Key? key,
+    super.key,
     required this.hideLongDeadlines,
     required this.onToggle,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   State<HideLongDeadlineButton> createState() => _HideLongDeadlineButtonState();

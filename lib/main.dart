@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'dart:io';
 import 'pages/add_task_page.dart';
 import 'widgets/task_list_widget.dart';
 import 'services/notification_service.dart';
@@ -28,7 +27,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,14 +41,15 @@ class MyApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final GlobalKey<TaskListWidgetState> _taskListKey = GlobalKey<TaskListWidgetState>();
+  final GlobalKey<TaskListWidgetState> _taskListKey =
+      GlobalKey<TaskListWidgetState>();
 
   @override
   Widget build(BuildContext context) {

@@ -7,10 +7,10 @@ class DeadlinePickerDialog extends StatefulWidget {
   final RepeatSettings? initialRepeatSettings;
 
   const DeadlinePickerDialog({
-    Key? key,
+    super.key,
     this.initialDate,
     this.initialRepeatSettings,
-  }) : super(key: key);
+  });
 
   @override
   State<DeadlinePickerDialog> createState() => _DeadlinePickerDialogState();

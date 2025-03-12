@@ -6,7 +6,7 @@ import '../models/repeat_settings.dart';
 import '../widgets/deadline_picker_dialog.dart';
 
 class AddTaskPage extends StatefulWidget {
-  const AddTaskPage({Key? key}) : super(key: key);
+  const AddTaskPage({super.key});
 
   @override
   State<AddTaskPage> createState() => _AddTaskPageState();

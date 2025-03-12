@@ -6,11 +6,11 @@ class ToggleCompletedButton extends StatefulWidget {
   final Color color;
 
   const ToggleCompletedButton({
-    Key? key,
+    super.key,
     required this.hideCompleted,
     required this.onToggle,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   State<ToggleCompletedButton> createState() => _ToggleCompletedButtonState();

@@ -11,12 +11,12 @@ class DeadlineButton extends StatelessWidget {
   final Function(DateTime?, RepeatSettings?) onDeadlineChanged;
 
   const DeadlineButton({
-    Key? key,
+    super.key,
     this.deadline,
     this.repeatSettings,
     required this.color,
     required this.onDeadlineChanged,
-  }) : super(key: key);
+  });
 
   String _formatDeadline(DateTime date) {
     final now = DateTime.now();

@@ -9,12 +9,12 @@ class FilterButtonsBar extends StatelessWidget {
   final VoidCallback onToggleLongDeadlines;
 
   const FilterButtonsBar({
-    Key? key,
+    super.key,
     required this.hideCompleted,
     required this.hideLongDeadlines,
     required this.onToggleCompleted,
     required this.onToggleLongDeadlines,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

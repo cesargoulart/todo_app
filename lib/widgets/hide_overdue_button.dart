@@ -6,11 +6,11 @@ class HideOverdueButton extends StatefulWidget {
   final Color color;
 
   const HideOverdueButton({
-    Key? key,
+    super.key,
     required this.hideOverdue,
     required this.onToggleOverdue,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   State<HideOverdueButton> createState() => _HideOverdueButtonState();

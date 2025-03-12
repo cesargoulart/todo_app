@@ -65,17 +65,9 @@ Future<void> updateTaskWithNextDeadline({
   // Method to fetch all tasks
   Future<List<Map<String, dynamic>>> fetchTasks() async {
     final response = await _client.from('todos').select();
-
-    if (response == null) {
-      throw Exception('Erro ao buscar tarefas: Resposta nula');
-    }
     
-    if (response is List) {
-      return List<Map<String, dynamic>>.from(response);
-    } else {
-      throw Exception('Erro ao buscar tarefas: Resposta inesperada ${response.runtimeType}');
+    return List<Map<String, dynamic>>.from(response);
     }
-  }
 
   // Updated method to update task deadline and repetition settings
   Future<void> updateTaskDeadline({
@@ -185,7 +177,7 @@ Future<void> updateTaskWithNextDeadline({
     }
 
     // Ensure next deadline is not in the past
-    if (nextDeadline != null && nextDeadline.isBefore(now)) {
+    if (nextDeadline.isBefore(now)) {
       while (nextDeadline!.isBefore(now)) {
         switch (settings.option) {
           case RepeatOption.never:
@@ -223,7 +215,7 @@ Future<void> updateTaskWithNextDeadline({
     }
 
     // Check against end date (if set)
-    if (settings.endDate != null && nextDeadline != null) {
+    if (settings.endDate != null) {
       if (nextDeadline.isAfter(settings.endDate!)) {
         return null; // Don't schedule beyond end date
       }
@@ -280,7 +272,7 @@ Future<void> updateTaskWithNextDeadline({
       throw Exception('Erro ao buscar tarefa: Tarefa não encontrada');
     }
 
-    final task = taskResponse as Map<String, dynamic>;
+    final task = taskResponse;
     
     // Handle legacy data structure
     RepeatSettings settings;
@@ -371,10 +363,6 @@ Future<void> updateTaskWithNextDeadline({
   // Method to delete a task
   Future<void> deleteTask(int taskId) async {
     final response = await _client.from('todos').delete().eq('id', taskId).select();
-
-    if (response == null) {
-      throw Exception('Erro ao excluir tarefa: Resposta nula');
-    }
 
     debugPrint('Task deleted: $taskId');
   }
