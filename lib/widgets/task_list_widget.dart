@@ -261,7 +261,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
           task['deadline'] != null ? DateTime.parse(task['deadline']) : null;
       final isCompleted = task['completed'] ?? false;
       final isLongDeadline =
-          deadline != null && deadline.difference(DateTime.now()).inDays > 3;
+          deadline != null && deadline.difference(DateTime.now()).inDays > 2;
       final isOverdue = deadline != null && deadline.isBefore(DateTime.now());
 
       if (_hideCompleted && isCompleted) {
