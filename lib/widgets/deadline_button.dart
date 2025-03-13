@@ -23,9 +23,14 @@ class DeadlineButton extends StatelessWidget {
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     final nextWeek = DateTime(now.year, now.month, now.day + 7);
 
-    // Within 24 hours
-    if (date.isBefore(tomorrow)) {
+    // Within 24 hours and not in the past
+    if (date.isBefore(tomorrow) && !date.isBefore(now)) {
       return 'Hoje, ${DateFormat.Hm().format(date)}';
+    }
+
+    // Past dates
+    if (date.isBefore(now)) {
+      return DateFormat('dd/MM, HH:mm').format(date);
     }
     
     // Within the next 7 days

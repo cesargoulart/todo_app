@@ -272,6 +272,7 @@ class TaskListWidgetState extends State<TaskListWidget> {
         return false;
       }
 
+      // When hideOverdue is true, hide overdue tasks
       if (_hideOverdue && isOverdue) {
         return false;
       }

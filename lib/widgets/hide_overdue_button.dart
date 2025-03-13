@@ -32,7 +32,7 @@ class _HideOverdueButtonState extends State<HideOverdueButton> {
             border: Border.all(color: widget.color, width: 2),
           ),
           child: Icon(
-            widget.hideOverdue ? Icons.visibility_off : Icons.visibility,
+            widget.hideOverdue ? Icons.access_time_filled : Icons.access_time,
             color: widget.color,
           ),
         ),
